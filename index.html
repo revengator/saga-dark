@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Saga Dark — Play in browser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="resources/saga-dark.png">
+    <script src="docs/jsspeccy/jsspeccy.js"></script>
+    <style>
+        :root {
+            --bg: #1a1a1a;
+            --fg: #f0f0f0;
+            --accent: #ffcc00;
+            --border: #444;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 1.5rem 1rem;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.5;
+            text-align: center;
+        }
+        header { max-width: 720px; margin: 0 auto 1.5rem; }
+        h1 { margin: 0 0 .5rem; color: var(--accent); font-size: 1.6rem; }
+        .tagline { margin: 0; opacity: .85; font-size: .95rem; }
+        .tagline a { color: var(--accent); }
+        .selector {
+            display: flex;
+            justify-content: center;
+            gap: .75rem;
+            margin: 1.25rem 0;
+            flex-wrap: wrap;
+        }
+        .selector button {
+            background: var(--bg);
+            color: var(--fg);
+            border: 2px solid var(--border);
+            padding: .55rem 1.1rem;
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: border-color .15s, color .15s;
+        }
+        .selector button:hover { border-color: var(--accent); color: var(--accent); }
+        .selector button.active { border-color: var(--accent); color: var(--accent); }
+        #jsspeccy {
+            width: 640px;
+            max-width: 100%;
+            margin: 0 auto;
+            background: #000;
+        }
+        footer {
+            max-width: 720px;
+            margin: 1.5rem auto 0;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: .8rem;
+            opacity: .7;
+        }
+        footer a { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Saga Dark — Play in browser</h1>
+        <p class="tagline">
+            Unfinished ZX Spectrum action-platformer by TRITON SOFTWARE (1989-1990),
+            preserved + remade for the +2 128K.
+            <a href="https://github.com/revengator/saga-dark">Source on GitHub</a>.
+        </p>
+    </header>
+
+    <div class="selector">
+        <button id="btn-dragon" class="active">▶ Dragon Phase</button>
+        <button id="btn-film">▶ Saga Film (intro)</button>
+    </div>
+
+    <div id="jsspeccy"></div>
+
+    <footer>
+        Emulator: <a href="https://github.com/gasman/jsspeccy3">JSSpeccy 3.2</a>
+        by Matt Westcott (GPL v3). Game and music modules licensed CC BY-NC-SA 4.0
+        unless noted otherwise — see the
+        <a href="https://github.com/revengator/saga-dark/blob/main/README.md">root README</a>
+        for music licensing details.
+    </footer>
+
+    <script>
+        const ROMS = {
+            dragon: 'remakes/128k-plus2-dragon/build/saga-dragon-128k.sna',
+            film:   'remakes/128k-plus2-film/build/saga-film-128k.sna',
+        };
+
+        const emu = JSSpeccy(document.getElementById('jsspeccy'), {
+            zoom: 2,
+            machine: 128,
+            sandbox: true,
+            openUrl: ROMS.dragon,
+        });
+
+        const btnDragon = document.getElementById('btn-dragon');
+        const btnFilm = document.getElementById('btn-film');
+
+        function load(which) {
+            emu.openUrl(ROMS[which]);
+            btnDragon.classList.toggle('active', which === 'dragon');
+            btnFilm.classList.toggle('active', which === 'film');
+        }
+
+        btnDragon.addEventListener('click', () => load('dragon'));
+        btnFilm.addEventListener('click', () => load('film'));
+    </script>
+</body>
+</html>

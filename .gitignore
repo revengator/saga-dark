@@ -1,0 +1,51 @@
+.idea
+.DS_Store
+
+# Native binaries built locally per machine (Intel / Apple Silicon / Linux).
+# Source lives in tools/zx0/src/; see tools/zx0/README.md for build steps.
+tools/zx0/zx0
+tools/zx0/dzx0
+tools/zx0/src/src/zx0
+tools/zx0/src/src/dzx0
+tools/zx0/src/src/*.o
+
+# Per-build assembler artifacts (regenerable by build.sh / sjasmplus).
+remakes/128k-plus2-film/film.sym
+remakes/128k-plus2-film/saga-film-128k.sna
+remakes/128k-plus2-film/saga-film-test-music.sna
+remakes/128k-plus2-film/build/saga-film-test-music.sna
+# blocks_raw/ holds .bin extracts derived from src/pantallas.asm; regenerable.
+remakes/128k-plus2-film/build/blocks_raw/
+remakes/128k-plus2-dragon/dragon.sym
+remakes/128k-plus2-platformer/build/phase2-build.sna
+remakes/128k-plus2-platformer/build/phase2-converged.bin
+remakes/128k-plus2-platformer/build/phase2-converged-cheat.bin
+remakes/128k-plus2-platformer/build/phase2-normal.log
+remakes/128k-plus2-platformer/build/phase2-cheat.log
+remakes/128k-plus2-platformer/saga-platformer-128k.sna
+remakes/128k-plus2-platformer/saga-platformer-128k-cheat.sna
+remakes/128k-plus2-platformer/saga-platformer-128k-debug.sna
+remakes/128k-plus2-platformer/build/saga-platformer-128k-debug.sna
+remakes/128k-plus2-platformer/build/main-cheat.sym
+remakes/128k-plus2-platformer/build/main-debug.sym
+
+# platformer v2 WIP (remakes/_in_progress/128k-plus2-platformer-v2/) — mirror of the above
+remakes/_in_progress/128k-plus2-platformer-v2/tests/build/saga-dark2-engine-v3.sna
+remakes/_in_progress/128k-plus2-platformer-v2/tests/build/saga-dark1-engine-v3.sna
+remakes/_in_progress/128k-plus2-platformer-v2/tests/build/phase2-converged.bin
+remakes/_in_progress/128k-plus2-platformer-v2/tests/build/*.sym
+remakes/_in_progress/128k-plus2-platformer-v2/tests/build/*.log
+remakes/_in_progress/128k-plus2-platformer-v2/build/phase2-converged.bin
+remakes/_in_progress/128k-plus2-platformer-v2/build/phase2-converged-cheat.bin
+remakes/_in_progress/128k-plus2-platformer-v2/build/phase2-normal.log
+remakes/_in_progress/128k-plus2-platformer-v2/build/phase2-cheat.log
+remakes/_in_progress/128k-plus2-platformer-v2/saga-platformer-128k.sna
+remakes/_in_progress/128k-plus2-platformer-v2/saga-platformer-128k-cheat.sna
+remakes/_in_progress/128k-plus2-platformer-v2/saga-platformer-128k-debug.sna
+remakes/_in_progress/128k-plus2-platformer-v2/build/saga-platformer-128k-debug.sna
+remakes/_in_progress/128k-plus2-platformer-v2/build/main-cheat.sym
+remakes/_in_progress/128k-plus2-platformer-v2/build/main-debug.sym
+# Audition / scratch build artifacts (regenerable, never shipped)
+remakes/128k-plus2-film/build/audition*.sna
+remakes/128k-plus2-film/build/saga-film-test-music.sna
+remakes/128k-plus2-film/build/*.pt3
