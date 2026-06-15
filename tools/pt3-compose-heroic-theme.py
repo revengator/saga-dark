@@ -58,6 +58,32 @@ Iteration log:
                      the pitched root, noise snare on 2&4 backbeat; four-on-the-
                      floor kick in the C1/C2 development) — the arp shimmer (ch B)
                      and lead (ch A) are untouched.
+  v4 (2026-06-15) — final touch (user "ultimo toque"): an expressive pass on the
+                     LEAD only — notes, rhythm, bass and percussion are unchanged.
+                     (1) DELAYED VIBRATO: the lead sample now sustains clean for
+                     ~16 frames then loops a +/-2-period, ~6 Hz tone-offset wobble,
+                     so the C1/C2 eighth-note runs stay in tune but held notes
+                     bloom into a singing vibrato (same tone-offset technique as
+                     the bushido shakuhachi). (2) DYNAMICS: a per-section lead+arp
+                     volume arc replaces the flat 15 — gentle intro (11), a
+                     crescendo into the C2 climax (15/15), and an intimate dip in
+                     the lyrical D1 (lead 13 over a receded arp 11 so the melody
+                     sings on top), then a rebuild back to the loop.
+  v5 (2026-06-15) — traditional Japanese / samurai SEASONING (user request),
+                     added without converting the scale (the melody stays in A
+                     natural minor; the heroic Follin identity is untouched):
+                     (1) TAIKO: a new deep drum sample (high-byte0 noise rumble,
+                     same technique as the bushido taiko) replaces the kick on
+                     the downbeats + a four-hit taiko roll builds into the C2
+                     climax. (2) SHAKUHACHI SIGH: an upper-appoggiatura ornament
+                     (+1 semitone falling to the note) on held lead notes that
+                     land on E (-> F-E) or A (-> Bb-A) — the two miyako-bushi
+                     half-steps voiced as a fleeting grace (a1, b2, d1), so the
+                     Japanese colour reads without Bb/F sitting in the harmony.
+                     (3) KOTO: the lyrical D1 bridge's shimmer switches from a
+                     triad to open fifths/octaves (koto voicing) — the Follin
+                     per-frame trick is kept, only the voicing opens; the heroic
+                     sections keep their triad shimmer.
 """
 
 from __future__ import annotations
@@ -168,24 +194,44 @@ def line(events: list, total: int = ROWS_PER_PATTERN) -> list:
 # -----------------------------------------------------------------------------
 # Samples (all pure tone). byte1 mix bits: bit7=1 noise OFF. 0x80|amp = tone.
 # -----------------------------------------------------------------------------
-def _sample_raw(b1_ticks: list[int], loop: int | None = None) -> bytes:
-    n = len(b1_ticks)
+def _sample_raw(ticks: list, loop: int | None = None) -> bytes:
+    """Each tick is either an int (byte1 = mix+amp; byte0 and tone offset 0) or a
+    tuple ``(byte1, byte0=0, tone_offset=0)``. The tone offset (bytes 2/3,
+    little-endian SIGNED) is a FIXED per-tick addition to the channel period —
+    oscillating it in a looped tail gives a pitch vibrato (not a glissando),
+    exactly the encoding used by the bushido shakuhachi sample."""
+    n = len(ticks)
     loop = n - 1 if loop is None else loop
     out = bytearray()
     out.append(loop)
     out.append(n - 1)
-    for b1 in b1_ticks:
-        out.append(0x00)        # byte0: no amp-slide / no env / no noise-slide
-        out.append(b1)          # byte1: mix bits + amplitude
-        out.append(0x00)        # tone offset lo
-        out.append(0x00)        # tone offset hi
+    for t in ticks:
+        if isinstance(t, tuple):
+            b1 = t[0]
+            b0 = t[1] if len(t) > 1 else 0
+            off = t[2] if len(t) > 2 else 0
+        else:
+            b1, b0, off = t, 0, 0
+        out.append(b0 & 0xFF)               # byte0: no amp-slide / env / noise-slide
+        out.append(b1 & 0xFF)               # byte1: mix bits + amplitude
+        out.extend((off & 0xFFFF).to_bytes(2, 'little'))   # tone offset (signed LE)
     return bytes(out)
 
 
 def build_sample_lead() -> bytes:
-    """Singing lead: bright attack, sustains high so the melody carries."""
-    amps = [15, 15, 15, 14, 14, 14, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13]
-    return _sample_raw([0x80 | a for a in amps])
+    """Singing lead with a DELAYED expressive vibrato.
+
+    Ticks 0-15: bright attack settling to a steady sustain, tone offset 0 — the
+    note speaks perfectly in tune. Ticks 16-23 (the loop region): a +/-2-period
+    tone-offset wobble (triangle, ~6 Hz) so HELD notes bloom into a singing
+    vibrato while FAST notes (< ~16 frames: the C1/C2 eighth-note runs) finish
+    inside the clean attack region and never wobble. Same tone-offset technique
+    as the bushido shakuhachi; the gradient (quarters wobble a touch, halves
+    sing) is what gives the lead its Follin-style expressivity."""
+    attack = [0x80 | a for a in
+              (15, 15, 15, 14, 14, 14, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)]
+    vib = [(0x80 | 13, 0, off) for off in (0, 1, 2, 1, 0, -1, -2, -1)]
+    return _sample_raw(attack + vib, loop=16)
 
 
 def build_sample_arp() -> bytes:
@@ -215,6 +261,18 @@ def build_sample_snare() -> bytes:
     return _sample_raw(ticks, loop=7)
 
 
+def build_sample_taiko() -> bytes:
+    """Taiko: a deep, resonant DRUM boom for the samurai flavour. The first three
+    ticks are noise+tone with a HIGH AY noise period (byte0 = 22/25 -> slow,
+    low-frequency rumble = the skin's body) carrying the bass root in their tone;
+    then the tone rings down to a quiet sustain so the hit still anchors the
+    low end without the four-on-the-floor development turning to mud. Same
+    deep-noise (high byte0) technique as the bushido taiko."""
+    boom = [(0x00 | 0xF, 22), (0x00 | 0xE, 25), (0x00 | 0xD, 22)]   # deep noise+tone
+    body = [0x80 | a for a in (0xD, 0xB, 0x9, 0x8, 0x7, 0x6, 0x5, 0x5)]  # ring down
+    return _sample_raw(boom + body, loop=10)            # quiet pitched low-end tail
+
+
 def build_ornament_empty() -> bytes:
     return bytes([0x00, 0x00, 0x00])
 
@@ -229,55 +287,93 @@ def build_ornament_major() -> bytes:
     return bytes([0x00, 0x02, 0, 4, 7])
 
 
+def build_ornament_sigh() -> bytes:
+    """Shakuhachi 'sigh': a quick upper appoggiatura that falls into the note —
+    +1 semitone for 3 frames (~60 ms) then settles on the note (loop holds 0).
+    On a note that lands on E it voices F->E; on A it voices Bb->A — the two
+    half-steps of the Japanese 'in'/miyako-bushi mode, here as a fleeting grace
+    so the colour reads as Japanese without sitting in (and fighting) the
+    A-minor harmony. Applied only to held E/A lead notes."""
+    return bytes([0x03, 0x03, 1, 1, 1, 0])      # loop=3, 4 offsets: 1,1,1,0
+
+
+def build_ornament_koto() -> bytes:
+    """Koto/open shimmer: arpeggiate root, +7 (fifth), +12 (octave) per frame —
+    open fifths/octaves instead of a triad, the hollow quartal/quintal colour of
+    a koto. Used only on the lyrical D1 bridge so the heroic sections keep their
+    Follin major/minor triad shimmer; the Follin per-frame trick itself is
+    preserved, only the voicing opens up."""
+    return bytes([0x00, 0x02, 0, 7, 12])        # loop=0, cycles 0,7,12
+
+
 # -----------------------------------------------------------------------------
 # Sample / ornament / volume assignments.
 # -----------------------------------------------------------------------------
-S_LEAD, S_ARP, S_KICK, S_SNARE = 1, 2, 3, 4
-ORN_EMPTY, ORN_MIN, ORN_MAJ = 0, 1, 2
+S_LEAD, S_ARP, S_KICK, S_SNARE, S_TAIKO = 1, 2, 3, 4, 5
+ORN_EMPTY, ORN_MIN, ORN_MAJ, ORN_SIGH, ORN_KOTO = 0, 1, 2, 3, 4
 V_LEAD, V_ARP, V_BASS = 15, 14, 15
 SNARE_NOTE = 'A-2'             # dummy pitch for the snare (noise only; tone off)
 
 
-def arp_channel(chords: list) -> bytes:
+def arp_channel(chords: list, vol: int = V_ARP,
+                orn_override: int | None = None) -> bytes:
     """chords = [(root, 'm'|'M'), ...] one per bar. Hold the root for the whole
-    bar with the matching triad ornament -> the Follin per-frame shimmer."""
+    bar with the matching triad ornament -> the Follin per-frame shimmer.
+    `vol` lets a section recede/swell so the shimmer follows the dynamic arc
+    (e.g. it pulls back under the lyrical lead, swells into the climax).
+    `orn_override` forces one ornament for every bar regardless of chord quality
+    (e.g. ORN_KOTO -> open-fifth koto shimmer for the lyrical bridge)."""
     rows: list = []
     for root, qual in chords:
-        orn = ORN_MIN if qual == 'm' else ORN_MAJ
+        orn = orn_override if orn_override is not None else \
+            (ORN_MIN if qual == 'm' else ORN_MAJ)
         rows.append((root, {'ornament': orn}))
         rows += [REST] * (BAR - 1)
     assert len(rows) == ROWS_PER_PATTERN
-    return encode_channel(rows, S_ARP, V_ARP, ornament=ORN_EMPTY)
+    return encode_channel(rows, S_ARP, vol, ornament=ORN_EMPTY)
 
 
-def build_bass(roots: list, style: str = 'q') -> list:
+def build_bass(roots: list, style: str = 'q', fill: str | None = None) -> list:
     """Bass+drums on one channel (preserves the arp shimmer). One root per bar.
-    style 'q' = backbeat: pitched kick on beats 1 & 3, noise snare on 2 & 4.
-    style 'e' = driving four-on-the-floor: pitched kick on every beat
-    (root/fifth alternation), no snare — for the fast development sections."""
+    style 'q' = backbeat: deep TAIKO boom on beats 1 & 3, noise snare on 2 & 4.
+    style 'e' = driving: TAIKO on the downbeat, lighter pitched kicks on 2/3/4
+    (root/fifth) so the fast development keeps its drive without low-end mud.
+    fill 'roll' = a four-hit taiko roll on the LAST beat of the final bar — a
+    drum build-up into the next pattern's downbeat (used for the C1->C2 climax)."""
     rows: list = []
     for root in roots:
         fifth = transpose(root, 7)
         bar = [REST] * BAR
         if style == 'e':
-            bar[0] = (root, {'sample': S_KICK})
+            bar[0] = (root, {'sample': S_TAIKO})        # taiko anchors the beat
             bar[4] = (fifth, {'sample': S_KICK})
             bar[8] = (root, {'sample': S_KICK})
             bar[12] = (fifth, {'sample': S_KICK})
         else:
-            bar[0] = (root, {'sample': S_KICK})
+            bar[0] = (root, {'sample': S_TAIKO})        # taiko replaces the kick
             bar[4] = (SNARE_NOTE, {'sample': S_SNARE})
-            bar[8] = (root, {'sample': S_KICK})
+            bar[8] = (root, {'sample': S_TAIKO})
             bar[12] = (SNARE_NOTE, {'sample': S_SNARE})
         rows += bar
+    if fill == 'roll':
+        root = roots[-1]
+        for r in (60, 61, 62, 63):                      # taiko 16ths into the climax
+            rows[r] = (root, {'sample': S_TAIKO})
     return rows
 
 
 def make_pattern(chords: list, bass_roots: list, lead_events: list,
-                 bass_style: str = 'q') -> tuple:
-    lead = encode_channel(line(lead_events, ROWS_PER_PATTERN), S_LEAD, V_LEAD)
-    arp = arp_channel(chords)
-    bass = encode_channel(build_bass(bass_roots, bass_style), S_KICK, V_BASS)
+                 bass_style: str = 'q', lead_vol: int = V_LEAD,
+                 arp_vol: int = V_ARP, arp_orn: int | None = None,
+                 bass_fill: str | None = None) -> tuple:
+    """`lead_vol`/`arp_vol` set this section's dynamic level (the per-pattern
+    base volume); the bass/drum channel keeps a constant level. `arp_orn` forces
+    the arp ornament (ORN_KOTO for the koto bridge); `bass_fill` adds a drum
+    fill ('roll' = taiko build-up into the next pattern)."""
+    lead = encode_channel(line(lead_events, ROWS_PER_PATTERN), S_LEAD, lead_vol)
+    arp = arp_channel(chords, arp_vol, orn_override=arp_orn)
+    bass = encode_channel(build_bass(bass_roots, bass_style, fill=bass_fill),
+                          S_TAIKO, V_BASS)
     return (lead, arp, bass)
 
 
@@ -290,7 +386,8 @@ def p_intro() -> tuple:
     return make_pattern(
         [('A-3', 'm'), ('A-3', 'm'), ('F-3', 'M'), ('E-3', 'M')],
         ['A-2', 'A-2', 'F-2', 'E-2'],
-        [('---', 60), ('E-4', 4)])
+        [('---', 60), ('E-4', 4)],
+        lead_vol=11, arp_vol=12)                  # gentle establish
 
 
 def p_a1() -> tuple:
@@ -299,9 +396,10 @@ def p_a1() -> tuple:
         [('A-3', 'm'), ('F-3', 'M'), ('C-4', 'M'), ('G-3', 'M')],
         ['A-2', 'F-2', 'C-3', 'G-2'],
         [('E-4', 4), ('A-4', 4), ('C-5', 4), ('B-4', 4),
-         ('A-4', 2), ('B-4', 2), ('C-5', 4), ('A-4', 8),
-         ('G-4', 4), ('E-4', 4), ('G-4', 4), ('C-5', 4),
-         ('B-4', 4), ('D-5', 4), ('B-4', 8)])
+         ('A-4', 2), ('B-4', 2), ('C-5', 4), (('A-4', {'ornament': ORN_SIGH}), 8),
+         (('G-4', {'ornament': ORN_EMPTY}), 4), ('E-4', 4), ('G-4', 4), ('C-5', 4),
+         ('B-4', 4), ('D-5', 4), ('B-4', 8)],
+        lead_vol=13, arp_vol=13)                  # statement (loop target), mezzo
 
 
 def p_a2() -> tuple:
@@ -312,7 +410,8 @@ def p_a2() -> tuple:
         [('C-5', 4), ('E-5', 4), ('D-5', 4), ('C-5', 4),
          ('A-4', 4), ('C-5', 4), ('A-4', 8),
          ('G-4', 4), ('C-5', 4), ('E-5', 4), ('D-5', 4),
-         ('C-5', 4), ('B-4', 4), ('G#4', 8)])
+         ('C-5', 4), ('B-4', 4), ('G#4', 8)],
+        lead_vol=14, arp_vol=13)                  # grow, climb to the dominant
 
 
 def p_b1() -> tuple:
@@ -323,7 +422,8 @@ def p_b1() -> tuple:
         [('E-5', 4), ('G-5', 4), ('E-5', 4), ('C-5', 4),
          ('D-5', 4), ('B-4', 4), ('G-4', 8),
          ('A-4', 4), ('C-5', 4), ('E-5', 4), ('C-5', 4),
-         ('A-4', 4), ('F-4', 4), ('A-4', 8)])
+         ('A-4', 4), ('F-4', 4), ('A-4', 8)],
+        lead_vol=14, arp_vol=13)                  # relative-major lift
 
 
 def p_b2() -> tuple:
@@ -333,8 +433,9 @@ def p_b2() -> tuple:
         ['D-3', 'E-2', 'A-2', 'E-2'],
         [('D-5', 4), ('F-5', 4), ('E-5', 4), ('D-5', 4),
          ('C-5', 4), ('B-4', 4), ('G#4', 4), ('B-4', 4),
-         ('A-4', 8), ('E-4', 4), ('A-4', 4),
-         ('B-4', 4), ('G#4', 4), ('E-4', 8)])
+         (('A-4', {'ornament': ORN_SIGH}), 8), (('E-4', {'ornament': ORN_EMPTY}), 4), ('A-4', 4),
+         ('B-4', 4), ('G#4', 4), ('E-4', 8)],
+        lead_vol=13, arp_vol=13)                  # cadential settle
 
 
 def p_c1() -> tuple:
@@ -347,7 +448,8 @@ def p_c1() -> tuple:
          ('B-4', 2), ('D-5', 2), ('G-5', 2), ('D-5', 2), ('B-4', 2), ('G-4', 2), ('A-4', 2), ('B-4', 2),  # G
          ('C-5', 2), ('A-4', 2), ('F-4', 2), ('A-4', 2), ('C-5', 2), ('F-5', 2), ('C-5', 2), ('A-4', 2),  # F
          ('G#4', 2), ('B-4', 2), ('E-5', 2), ('B-4', 2), ('G#4', 2), ('E-4', 2), ('B-4', 2), ('E-5', 2)],  # E
-        bass_style='e')
+        bass_style='e', lead_vol=13, arp_vol=13,
+        bass_fill='roll')                         # dev starts (building) + taiko roll into C2
 
 
 def p_c2() -> tuple:
@@ -359,7 +461,7 @@ def p_c2() -> tuple:
          ('E-5', 2), ('G#5', 2), ('B-5', 2), ('G#5', 2), ('E-5', 2), ('B-4', 2), ('E-5', 2), ('G#5', 2),  # E peak
          ('A-5', 4), ('E-5', 4), ('C-5', 4), ('A-4', 4),                                                  # Am land
          ('B-4', 4), ('C-5', 4), ('D-5', 4), ('E-5', 4)],                                                 # climb up
-        bass_style='e')
+        bass_style='e', lead_vol=15, arp_vol=15)  # CLIMAX peak — full swell
 
 
 def p_d1() -> tuple:
@@ -367,10 +469,12 @@ def p_d1() -> tuple:
     return make_pattern(
         [('C-4', 'M'), ('E-3', 'm'), ('F-3', 'M'), ('G-3', 'M')],
         ['C-3', 'E-2', 'F-2', 'G-2'],
-        [('E-5', 8), ('G-5', 8),
+        [(('E-5', {'ornament': ORN_SIGH}), 8), (('G-5', {'ornament': ORN_EMPTY}), 8),
          ('G-5', 4), ('E-5', 4), ('B-4', 8),
          ('A-4', 4), ('C-5', 4), ('F-5', 8),
-         ('E-5', 4), ('D-5', 4), ('B-4', 8)])
+         ('E-5', 4), ('D-5', 4), ('B-4', 8)],
+        lead_vol=13, arp_vol=11,                  # lyrical: arp recedes, lead sings
+        arp_orn=ORN_KOTO)                         # koto open-5th shimmer + shakuhachi sigh
 
 
 def p_d2() -> tuple:
@@ -381,7 +485,8 @@ def p_d2() -> tuple:
         [('C-5', 4), ('E-5', 4), ('A-5', 4), ('E-5', 4),
          ('C-5', 4), ('A-4', 4), ('F-4', 8),
          ('D-5', 4), ('F-5', 4), ('E-5', 4), ('D-5', 4),
-         ('B-4', 4), ('G#4', 4), ('B-4', 4), ('E-4', 4)])
+         ('B-4', 4), ('G#4', 4), ('B-4', 4), ('E-4', 4)],
+        lead_vol=14, arp_vol=13)                  # rebuild toward the loop (A1)
 
 
 # Pattern order + loop target (position index that the song loops to after the
@@ -397,8 +502,10 @@ LOOP_POSITION = 1
 def build_pt3() -> bytes:
     patterns_data = [b() for b in PATTERN_BUILDERS]
     samples = {1: build_sample_lead(), 2: build_sample_arp(),
-               3: build_sample_kick(), 4: build_sample_snare()}
-    ornaments = [build_ornament_empty(), build_ornament_minor(), build_ornament_major()]
+               3: build_sample_kick(), 4: build_sample_snare(),
+               5: build_sample_taiko()}
+    ornaments = [build_ornament_empty(), build_ornament_minor(), build_ornament_major(),
+                 build_ornament_sigh(), build_ornament_koto()]
 
     position_list = bytes([i * 3 for i in range(len(patterns_data))] + [0xFF])
 
