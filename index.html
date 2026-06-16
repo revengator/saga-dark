@@ -29,34 +29,89 @@
         .tagline a { color: var(--accent); }
 
         /* ── ROM selector ── */
-        .selector { max-width: 760px; margin: 1.25rem auto; }
-        .group { margin: 0 0 1rem; }
-        .group-title {
-            font-size: .8rem;
-            letter-spacing: .04em;
-            text-transform: uppercase;
-            opacity: .6;
-            margin: 0 0 .5rem;
-        }
-        .group-buttons {
+        .selector {
+            max-width: 860px;
+            margin: 1.5rem auto;
             display: flex;
-            justify-content: center;
-            gap: .6rem;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 1rem;
+            text-align: left;
         }
-        .selector button {
-            background: var(--bg);
+        .era {
+            background: #222;
+            border: 1px solid #303030;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .era-head {
+            padding: .6rem 1.1rem;
+            background: #272727;
+            border-bottom: 1px solid #303030;
+            display: flex;
+            align-items: baseline;
+            gap: .65rem;
+        }
+        .era-name {
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .era-sub {
+            font-size: .72rem;
+            opacity: .45;
+            letter-spacing: .02em;
+        }
+        .phases {
+            display: grid;
+            grid-template-columns: 1fr 1.9fr 1fr;
+        }
+        .phase + .phase { border-left: 1px solid #2c2c2c; }
+        .phase { padding: .85rem 1rem; }
+        .phase-name {
+            font-size: .65rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #777;
+            margin-bottom: .55rem;
+            padding-bottom: .35rem;
+            border-bottom: 1px solid #2c2c2c;
+        }
+        /* main game button */
+        .btn {
+            display: block;
+            width: 100%;
+            background: #1a1a1a;
             color: var(--fg);
-            border: 2px solid var(--border);
-            padding: .55rem 1.1rem;
-            font-size: 1rem;
+            border: 1px solid #3a3a3a;
+            padding: .5rem .75rem;
+            font-size: .88rem;
             font-family: inherit;
             cursor: pointer;
-            border-radius: 4px;
-            transition: border-color .15s, color .15s;
+            border-radius: 5px;
+            text-align: left;
+            transition: border-color .12s, color .12s, background .12s;
+            margin-bottom: .32rem;
         }
-        .selector button:hover  { border-color: var(--accent); color: var(--accent); }
-        .selector button.active { border-color: var(--accent); color: var(--accent); }
+        .btn:last-child { margin-bottom: 0; }
+        .btn:hover  { border-color: var(--accent); color: var(--accent); }
+        .btn.active { border-color: var(--accent); color: var(--accent); background: #1c1a00; }
+        /* inmortal (cheat) variant — visually subordinate */
+        .btn.cheat {
+            font-size: .78rem;
+            opacity: .65;
+            padding-left: 1.4rem;
+            border-style: dashed;
+            border-color: #333;
+        }
+        .btn.cheat::before { content: '★ '; }
+        .btn.cheat:hover  { opacity: 1; border-color: var(--accent); color: var(--accent); }
+        .btn.cheat.active { opacity: 1; }
+        @media (max-width: 560px) {
+            .phases { grid-template-columns: 1fr; }
+            .phase + .phase { border-left: none; border-top: 1px solid #2c2c2c; }
+        }
 
         /* ── Emulator canvas ── */
         #jsspeccy {
@@ -178,26 +233,55 @@
     </header>
 
     <div class="selector">
-        <div class="group">
-            <p class="group-title">Remakes — ZX Spectrum +2 128K</p>
-            <div class="group-buttons">
-                <button data-rom="platformer" class="active">▶ Platformer (Dark 1 + 2)</button>
-                <button data-rom="platformer-cheat">▶ Platformer · inmortal</button>
-                <button data-rom="dragon">▶ Dragon Phase</button>
-                <button data-rom="film">▶ Saga Film (intro)</button>
+
+        <!-- ── REMAKES ── -->
+        <div class="era">
+            <div class="era-head">
+                <span class="era-name">Remakes</span>
+                <span class="era-sub">ZX Spectrum +2 128K</span>
+            </div>
+            <div class="phases">
+                <div class="phase">
+                    <div class="phase-name">Pelicula</div>
+                    <button class="btn" data-rom="film">Saga Film</button>
+                </div>
+                <div class="phase">
+                    <div class="phase-name">Platformer · Dark 1 + 2</div>
+                    <button class="btn active" data-rom="platformer">Platformer</button>
+                    <button class="btn cheat" data-rom="platformer-cheat">Inmortal</button>
+                </div>
+                <div class="phase">
+                    <div class="phase-name">Dragon Phase</div>
+                    <button class="btn" data-rom="dragon">Dragon Phase</button>
+                </div>
             </div>
         </div>
-        <div class="group">
-            <p class="group-title">Originals — ZX Spectrum 48K (1989-1990)</p>
-            <div class="group-buttons">
-                <button data-rom="o-dark1">▶ Dark 1 (Phase 1)</button>
-                <button data-rom="o-dark1-cheat">▶ Dark 1 · inmortal</button>
-                <button data-rom="o-dark2">▶ Dark 2 (Phase 2)</button>
-                <button data-rom="o-dark2-cheat">▶ Dark 2 · inmortal</button>
-                <button data-rom="o-dark3">▶ Dark 3 (Dragon)</button>
-                <button data-rom="o-film">▶ Film (intro)</button>
+
+        <!-- ── ORIGINALES ── -->
+        <div class="era">
+            <div class="era-head">
+                <span class="era-name">Originales</span>
+                <span class="era-sub">ZX Spectrum 48K · 1989-1990</span>
+            </div>
+            <div class="phases">
+                <div class="phase">
+                    <div class="phase-name">Pelicula</div>
+                    <button class="btn" data-rom="o-film">Film (intro)</button>
+                </div>
+                <div class="phase">
+                    <div class="phase-name">Dark 1 + 2</div>
+                    <button class="btn" data-rom="o-dark1">Dark 1 — Phase 1</button>
+                    <button class="btn cheat" data-rom="o-dark1-cheat">Inmortal</button>
+                    <button class="btn" data-rom="o-dark2">Dark 2 — Phase 2</button>
+                    <button class="btn cheat" data-rom="o-dark2-cheat">Inmortal</button>
+                </div>
+                <div class="phase">
+                    <div class="phase-name">Dark 3 · Dragon</div>
+                    <button class="btn" data-rom="o-dark3">Dark 3</button>
+                </div>
             </div>
         </div>
+
     </div>
 
     <div id="jsspeccy"></div>
