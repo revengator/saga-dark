@@ -27,13 +27,10 @@
         h1 { margin: 0 0 .5rem; color: var(--accent); font-size: 1.6rem; }
         .tagline { margin: 0; opacity: .85; font-size: .95rem; }
         .tagline a { color: var(--accent); }
-        .selector {
-            max-width: 760px;
-            margin: 1.25rem auto;
-        }
-        .group {
-            margin: 0 0 1rem;
-        }
+
+        /* ── ROM selector ── */
+        .selector { max-width: 760px; margin: 1.25rem auto; }
+        .group { margin: 0 0 1rem; }
         .group-title {
             font-size: .8rem;
             letter-spacing: .04em;
@@ -58,14 +55,74 @@
             border-radius: 4px;
             transition: border-color .15s, color .15s;
         }
-        .selector button:hover { border-color: var(--accent); color: var(--accent); }
+        .selector button:hover  { border-color: var(--accent); color: var(--accent); }
         .selector button.active { border-color: var(--accent); color: var(--accent); }
+
+        /* ── Emulator canvas ── */
         #jsspeccy {
-            width: 640px;
+            width: 320px;   /* 100 % = 256 px × 1 + border = 320 px */
             max-width: 100%;
             margin: 0 auto;
             background: #000;
         }
+
+        /* ── Virtual gamepad (shown only on touch devices via JS) ── */
+        #vkb {
+            display: none;            /* hidden by default; JS enables on touch devices */
+            max-width: 480px;
+            margin: 1.25rem auto 0;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* D-pad: 3×3 grid, centre cell empty */
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 56px);
+            grid-template-rows:    repeat(3, 56px);
+            gap: 4px;
+        }
+        .dpad .vk {
+            grid-column: var(--gc);
+            grid-row:    var(--gr);
+        }
+
+        /* Action cluster: 2×2 grid */
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(2, 56px);
+            grid-template-rows:    repeat(2, 56px);
+            gap: 4px;
+        }
+
+        /* Individual key button */
+        .vk {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            border: 2px solid #555;
+            background: #2a2a2a;
+            color: var(--fg);
+            font-size: 1.3rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            transition: background .08s, border-color .08s;
+        }
+        .vk:active, .vk.pressed {
+            background: #444;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .vk.fire { background: #3a1a1a; border-color: #a00; }
+        .vk.fire:active, .vk.fire.pressed { background: #6a1a1a; border-color: #f44; color: #f44; }
+
         footer {
             max-width: 720px;
             margin: 1.5rem auto 0;
@@ -112,9 +169,34 @@
 
     <div id="jsspeccy"></div>
 
+    <!--
+      Virtual gamepad — only shown on touch devices (JS sets display:flex).
+
+      D-pad maps to arrow keys; FIRE = Space; 1/2/3 for menus.
+      If the game uses O/P/Q/A instead of arrows, use the game's own
+      key-select screen (start the game first, then choose keyboard layout).
+    -->
+    <div id="vkb">
+        <!-- Left: D-pad -->
+        <div class="dpad">
+            <button class="vk" style="--gc:2;--gr:1" data-key="ArrowUp"    data-code="ArrowUp"    title="Up">↑</button>
+            <button class="vk" style="--gc:1;--gr:2" data-key="ArrowLeft"  data-code="ArrowLeft"  title="Left">←</button>
+            <button class="vk" style="--gc:3;--gr:2" data-key="ArrowRight" data-code="ArrowRight" title="Right">→</button>
+            <button class="vk" style="--gc:2;--gr:3" data-key="ArrowDown"  data-code="ArrowDown"  title="Down">↓</button>
+        </div>
+
+        <!-- Right: action buttons -->
+        <div class="actions">
+            <button class="vk fire" data-key=" " data-code="Space"  title="Fire / Jump">🔥</button>
+            <button class="vk"      data-key="1" data-code="Digit1" title="1">1</button>
+            <button class="vk"      data-key="2" data-code="Digit2" title="2">2</button>
+            <button class="vk"      data-key="3" data-code="Digit3" title="3">3</button>
+        </div>
+    </div>
+
     <footer>
         Emulator: <a href="https://github.com/gasman/jsspeccy3">JSSpeccy 3.2</a>
-        by Matt Westcott (GPL v3). Game and music modules licensed CC BY-NC-SA 4.0
+        by Matt Westcott (GPL v3). Game and music licensed CC BY-NC-SA 4.0
         unless noted otherwise — see the
         <a href="https://github.com/revengator/saga-dark/blob/main/README.md">root README</a>
         for music licensing details.
@@ -139,12 +221,13 @@
         const DEFAULT_ROM = 'platformer';
 
         const emu = JSSpeccy(document.getElementById('jsspeccy'), {
-            zoom: 2,
+            zoom: 1,
             machine: 128,
             sandbox: true,
             openUrl: ROMS[DEFAULT_ROM],
         });
 
+        // ── ROM selector ──────────────────────────────────────────────────────
         const buttons = Array.from(document.querySelectorAll('.selector button[data-rom]'));
 
         function load(which) {
@@ -155,6 +238,43 @@
         }
 
         buttons.forEach((b) => b.addEventListener('click', () => load(b.dataset.rom)));
+
+        // ── Virtual gamepad (touch devices only) ──────────────────────────────
+        // Show the gamepad only when a touch-capable device is detected.
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            document.getElementById('vkb').style.display = 'flex';
+        }
+
+        // Dispatch keyboard events on the document so JSSpeccy picks them up.
+        function vkDown(key, code) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true }));
+        }
+        function vkUp(key, code) {
+            document.dispatchEvent(new KeyboardEvent('keyup', { key, code, bubbles: true }));
+        }
+
+        document.querySelectorAll('#vkb .vk').forEach((btn) => {
+            const key  = btn.dataset.key;
+            const code = btn.dataset.code;
+
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                btn.classList.add('pressed');
+                vkDown(key, code);
+            }, { passive: false });
+
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                btn.classList.remove('pressed');
+                vkUp(key, code);
+            }, { passive: false });
+
+            // Safety: release if touch moves off the button
+            btn.addEventListener('touchcancel', () => {
+                btn.classList.remove('pressed');
+                vkUp(key, code);
+            });
+        });
     </script>
 </body>
 </html>
