@@ -60,68 +60,74 @@
 
         /* ── Emulator canvas ── */
         #jsspeccy {
-            width: 320px;   /* 100 % = 256 px × 1 + border = 320 px */
+            width: 320px;   /* zoom:1 → 256 px logical + 32 px border each side */
             max-width: 100%;
             margin: 0 auto;
             background: #000;
         }
 
-        /* ── Virtual gamepad (shown only on touch devices via JS) ── */
+        /* ── Virtual gamepad ── */
         #vkb {
-            display: none;            /* hidden by default; JS enables on touch devices */
-            max-width: 480px;
+            display: none;          /* JS shows it on touch devices */
+            max-width: 340px;
             margin: 1.25rem auto 0;
-            gap: 1rem;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            gap: .75rem;
             user-select: none;
             -webkit-user-select: none;
         }
 
-        /* D-pad: 3×3 grid, centre cell empty */
+        /* D-pad: 3×3 grid */
         .dpad {
             display: grid;
-            grid-template-columns: repeat(3, 56px);
-            grid-template-rows:    repeat(3, 56px);
-            gap: 4px;
-        }
-        .dpad .vk {
-            grid-column: var(--gc);
-            grid-row:    var(--gr);
+            grid-template-columns: repeat(3, 58px);
+            grid-template-rows:    repeat(3, 58px);
+            gap: 3px;
         }
 
         /* Action cluster: 2×2 grid */
         .actions {
             display: grid;
-            grid-template-columns: repeat(2, 56px);
-            grid-template-rows:    repeat(2, 56px);
-            gap: 4px;
+            grid-template-columns: repeat(2, 58px);
+            grid-template-rows:    repeat(2, 58px);
+            gap: 3px;
         }
 
         /* Individual key button */
         .vk {
-            width: 56px;
-            height: 56px;
             border-radius: 8px;
             border: 2px solid #555;
             background: #2a2a2a;
             color: var(--fg);
-            font-size: 1.3rem;
-            line-height: 1;
+            font-size: 1.1rem;
+            font-family: inherit;
             cursor: pointer;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 1px;
             touch-action: none;
-            transition: background .08s, border-color .08s;
+            transition: background .07s, border-color .07s;
         }
+        .vk .vk-label { font-size: .6rem; opacity: .65; line-height: 1; }
         .vk:active, .vk.pressed {
-            background: #444;
+            background: #3a3a3a;
             border-color: var(--accent);
             color: var(--accent);
         }
-        .vk.fire { background: #3a1a1a; border-color: #a00; }
-        .vk.fire:active, .vk.fire.pressed { background: #6a1a1a; border-color: #f44; color: #f44; }
+        .vk.fire { border-color: #a00; }
+        .vk.fire:active, .vk.fire.pressed {
+            background: #5a1a1a;
+            border-color: #f55;
+            color: #f55;
+        }
+        /* disabled = no key mapping (e.g. dragon has no down) */
+        .vk.vk-disabled {
+            opacity: .2;
+            pointer-events: none;
+        }
 
         footer {
             max-width: 720px;
@@ -172,25 +178,48 @@
     <!--
       Virtual gamepad — only shown on touch devices (JS sets display:flex).
 
-      D-pad maps to arrow keys; FIRE = Space; 1/2/3 for menus.
-      If the game uses O/P/Q/A instead of arrows, use the game's own
-      key-select screen (start the game first, then choose keyboard layout).
+      Keymaps per game:
+        Platformer (Dark 1/2): O=left  P=right  Q=up  A=down  M=fire
+        Dragon (Dark 3):       R=left  Y=right  I=jump  (no fire/down)
+        Film:                  1/2/Space to advance
     -->
     <div id="vkb">
-        <!-- Left: D-pad -->
         <div class="dpad">
-            <button class="vk" style="--gc:2;--gr:1" data-key="ArrowUp"    data-code="ArrowUp"    title="Up">↑</button>
-            <button class="vk" style="--gc:1;--gr:2" data-key="ArrowLeft"  data-code="ArrowLeft"  title="Left">←</button>
-            <button class="vk" style="--gc:3;--gr:2" data-key="ArrowRight" data-code="ArrowRight" title="Right">→</button>
-            <button class="vk" style="--gc:2;--gr:3" data-key="ArrowDown"  data-code="ArrowDown"  title="Down">↓</button>
+            <!-- row 1 -->
+            <div></div>
+            <button class="vk" id="vk-u" style="grid-column:2;grid-row:1">
+                <span>↑</span><span class="vk-label" id="vk-u-lbl"></span>
+            </button>
+            <div></div>
+            <!-- row 2 -->
+            <button class="vk" id="vk-l" style="grid-column:1;grid-row:2">
+                <span>←</span><span class="vk-label" id="vk-l-lbl"></span>
+            </button>
+            <div style="grid-column:2;grid-row:2"></div>
+            <button class="vk" id="vk-r" style="grid-column:3;grid-row:2">
+                <span>→</span><span class="vk-label" id="vk-r-lbl"></span>
+            </button>
+            <!-- row 3 -->
+            <div></div>
+            <button class="vk" id="vk-d" style="grid-column:2;grid-row:3">
+                <span>↓</span><span class="vk-label" id="vk-d-lbl"></span>
+            </button>
+            <div></div>
         </div>
 
-        <!-- Right: action buttons -->
         <div class="actions">
-            <button class="vk fire" data-key=" " data-code="Space"  title="Fire / Jump">🔥</button>
-            <button class="vk"      data-key="1" data-code="Digit1" title="1">1</button>
-            <button class="vk"      data-key="2" data-code="Digit2" title="2">2</button>
-            <button class="vk"      data-key="3" data-code="Digit3" title="3">3</button>
+            <button class="vk fire" id="vk-f" style="grid-column:1;grid-row:1">
+                <span id="vk-f-ico">🔥</span><span class="vk-label" id="vk-f-lbl"></span>
+            </button>
+            <button class="vk" id="vk-1" data-key="1" data-code="Digit1">
+                <span>1</span>
+            </button>
+            <button class="vk" id="vk-2" data-key="2" data-code="Digit2">
+                <span>2</span>
+            </button>
+            <button class="vk" id="vk-3" data-key="3" data-code="Digit3">
+                <span>3</span>
+            </button>
         </div>
     </div>
 
@@ -203,9 +232,7 @@
     </footer>
 
     <script>
-        // Remakes are +2 128K snapshots; originals are 48K snapshots/.z80.
-        // JSSpeccy reads the machine model from each snapshot and switches the
-        // emulated hardware on load, so 48K and 128K entries can share one menu.
+        // ── ROM list ──────────────────────────────────────────────────────────
         const ROMS = {
             'platformer':       'remakes/128k-plus2-platformer/build/saga-platformer-128k.sna',
             'platformer-cheat': 'remakes/128k-plus2-platformer/build/saga-platformer-128k-cheat.sna',
@@ -218,8 +245,24 @@
             'o-dark3':          'original-48k/snapshots/dark3/dark3.sna',
             'o-film':           'original-48k/snapshots/film/film.z80',
         };
+
+        // Key mapping per ROM: { L, R, U, D, F } → single letter or null
+        // null = button disabled (no mapping for that direction in this game)
+        const KEYMAPS = {
+            'platformer':       { L:'o', R:'p', U:'q', D:'a', F:'m' },
+            'platformer-cheat': { L:'o', R:'p', U:'q', D:'a', F:'m' },
+            'dragon':           { L:'r', R:'y', U:'i', D:null, F:null },
+            'film':             { L:null, R:null, U:null, D:null, F:' ' },
+            'o-dark1':          { L:'o', R:'p', U:'q', D:'a', F:'m' },
+            'o-dark1-cheat':    { L:'o', R:'p', U:'q', D:'a', F:'m' },
+            'o-dark2':          { L:'o', R:'p', U:'q', D:'a', F:'m' },
+            'o-dark2-cheat':    { L:'o', R:'p', U:'q', D:'a', F:'m' },
+            'o-dark3':          { L:'r', R:'y', U:'i', D:null, F:null },
+            'o-film':           { L:null, R:null, U:null, D:null, F:' ' },
+        };
         const DEFAULT_ROM = 'platformer';
 
+        // ── Emulator init ─────────────────────────────────────────────────────
         const emu = JSSpeccy(document.getElementById('jsspeccy'), {
             zoom: 1,
             machine: 128,
@@ -228,51 +271,104 @@
         });
 
         // ── ROM selector ──────────────────────────────────────────────────────
-        const buttons = Array.from(document.querySelectorAll('.selector button[data-rom]'));
+        const selectorBtns = Array.from(document.querySelectorAll('.selector button[data-rom]'));
 
         function load(which) {
             const url = ROMS[which];
             if (!url) return;
             emu.openUrl(url);
-            buttons.forEach((b) => b.classList.toggle('active', b.dataset.rom === which));
+            selectorBtns.forEach((b) => b.classList.toggle('active', b.dataset.rom === which));
+            applyKeymap(KEYMAPS[which] || KEYMAPS['platformer']);
         }
 
-        buttons.forEach((b) => b.addEventListener('click', () => load(b.dataset.rom)));
+        selectorBtns.forEach((b) => b.addEventListener('click', () => load(b.dataset.rom)));
 
-        // ── Virtual gamepad (touch devices only) ──────────────────────────────
-        // Show the gamepad only when a touch-capable device is detected.
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            document.getElementById('vkb').style.display = 'flex';
+        // ── Virtual gamepad ───────────────────────────────────────────────────
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isTouch) document.getElementById('vkb').style.display = 'flex';
+
+        // Map a single letter to { key, code } for KeyboardEvent
+        function letterToKE(l) {
+            if (!l)     return null;
+            if (l === ' ') return { key: ' ', code: 'Space' };
+            return { key: l, code: 'Key' + l.toUpperCase() };
         }
 
-        // Dispatch keyboard events on the document so JSSpeccy picks them up.
+        // Direction buttons: element id → keymap slot
+        const DIR_BTNS = [
+            { id: 'vk-l', slot: 'L', lblId: 'vk-l-lbl' },
+            { id: 'vk-r', slot: 'R', lblId: 'vk-r-lbl' },
+            { id: 'vk-u', slot: 'U', lblId: 'vk-u-lbl' },
+            { id: 'vk-d', slot: 'D', lblId: 'vk-d-lbl' },
+        ];
+
+        function applyKeymap(km) {
+            DIR_BTNS.forEach(({ id, slot, lblId }) => {
+                const btn = document.getElementById(id);
+                const ke  = letterToKE(km[slot]);
+                if (ke) {
+                    btn.dataset.key  = ke.key;
+                    btn.dataset.code = ke.code;
+                    document.getElementById(lblId).textContent = km[slot].toUpperCase();
+                    btn.classList.remove('vk-disabled');
+                } else {
+                    delete btn.dataset.key;
+                    delete btn.dataset.code;
+                    document.getElementById(lblId).textContent = '';
+                    btn.classList.add('vk-disabled');
+                }
+            });
+
+            // Fire button
+            const fireBtn = document.getElementById('vk-f');
+            const fireKE  = letterToKE(km.F);
+            if (fireKE) {
+                fireBtn.dataset.key  = fireKE.key;
+                fireBtn.dataset.code = fireKE.code;
+                document.getElementById('vk-f-ico').textContent = '🔥';
+                document.getElementById('vk-f-lbl').textContent = km.F === ' ' ? 'SPC' : km.F.toUpperCase();
+                fireBtn.classList.remove('vk-disabled');
+            } else {
+                delete fireBtn.dataset.key;
+                delete fireBtn.dataset.code;
+                document.getElementById('vk-f-ico').textContent = '🔥';
+                document.getElementById('vk-f-lbl').textContent = '';
+                fireBtn.classList.add('vk-disabled');
+            }
+        }
+
+        // Apply default keymap on load
+        applyKeymap(KEYMAPS[DEFAULT_ROM]);
+
+        // Dispatch keyboard events to document so JSSpeccy picks them up
         function vkDown(key, code) {
             document.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true }));
         }
         function vkUp(key, code) {
-            document.dispatchEvent(new KeyboardEvent('keyup', { key, code, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent('keyup',   { key, code, bubbles: true }));
         }
 
+        // Attach touch handlers to every .vk button
         document.querySelectorAll('#vkb .vk').forEach((btn) => {
-            const key  = btn.dataset.key;
-            const code = btn.dataset.code;
-
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                const { key, code } = btn.dataset;
+                if (!key) return;
                 btn.classList.add('pressed');
                 vkDown(key, code);
             }, { passive: false });
 
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
+                const { key, code } = btn.dataset;
                 btn.classList.remove('pressed');
-                vkUp(key, code);
+                if (key) vkUp(key, code);
             }, { passive: false });
 
-            // Safety: release if touch moves off the button
             btn.addEventListener('touchcancel', () => {
+                const { key, code } = btn.dataset;
                 btn.classList.remove('pressed');
-                vkUp(key, code);
+                if (key) vkUp(key, code);
             });
         });
     </script>
