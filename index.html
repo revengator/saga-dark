@@ -191,13 +191,13 @@
 
     <!-- Number row: own row on top, always visible on touch devices -->
     <div class="numrow" id="vkb-nums">
-        <button class="vk" data-key="0" data-code="Digit0"><span>0</span></button>
-        <button class="vk" data-key="1" data-code="Digit1"><span>1</span></button>
-        <button class="vk" data-key="2" data-code="Digit2"><span>2</span></button>
-        <button class="vk" data-key="3" data-code="Digit3"><span>3</span></button>
-        <button class="vk" data-key="4" data-code="Digit4"><span>4</span></button>
-        <button class="vk" data-key="5" data-code="Digit5"><span>5</span></button>
-        <button class="vk" data-key="Enter" data-code="Enter" style="min-width:56px;font-size:.75rem">ENT</button>
+        <button class="vk" data-key="0" data-code="Digit0" data-keycode="48"><span>0</span></button>
+        <button class="vk" data-key="1" data-code="Digit1" data-keycode="49"><span>1</span></button>
+        <button class="vk" data-key="2" data-code="Digit2" data-keycode="50"><span>2</span></button>
+        <button class="vk" data-key="3" data-code="Digit3" data-keycode="51"><span>3</span></button>
+        <button class="vk" data-key="4" data-code="Digit4" data-keycode="52"><span>4</span></button>
+        <button class="vk" data-key="5" data-code="Digit5" data-keycode="53"><span>5</span></button>
+        <button class="vk" data-key="Enter" data-code="Enter" data-keycode="13" style="min-width:62px;font-size:.7rem">ENTER</button>
     </div>
 
     <!--
@@ -306,11 +306,12 @@
             document.getElementById('vkb').style.display = 'flex';
         }
 
-        // Map a single letter to { key, code } for KeyboardEvent
+        // Map a single letter/special to { key, code, keyCode } for KeyboardEvent
+        // JSSpeccy uses e.keyCode internally, so all three fields are required.
         function letterToKE(l) {
-            if (!l)     return null;
-            if (l === ' ') return { key: ' ', code: 'Space' };
-            return { key: l, code: 'Key' + l.toUpperCase() };
+            if (!l)        return null;
+            if (l === ' ') return { key: ' ', code: 'Space',  keyCode: 32 };
+            return { key: l, code: 'Key' + l.toUpperCase(), keyCode: l.toUpperCase().charCodeAt(0) };
         }
 
         // Direction buttons: element id → keymap slot
@@ -326,13 +327,15 @@
                 const btn = document.getElementById(id);
                 const ke  = letterToKE(km[slot]);
                 if (ke) {
-                    btn.dataset.key  = ke.key;
-                    btn.dataset.code = ke.code;
+                    btn.dataset.key     = ke.key;
+                    btn.dataset.code    = ke.code;
+                    btn.dataset.keycode = ke.keyCode;
                     document.getElementById(lblId).textContent = km[slot].toUpperCase();
                     btn.classList.remove('vk-disabled');
                 } else {
                     delete btn.dataset.key;
                     delete btn.dataset.code;
+                    delete btn.dataset.keycode;
                     document.getElementById(lblId).textContent = '';
                     btn.classList.add('vk-disabled');
                 }
@@ -342,14 +345,16 @@
             const fireBtn = document.getElementById('vk-f');
             const fireKE  = letterToKE(km.F);
             if (fireKE) {
-                fireBtn.dataset.key  = fireKE.key;
-                fireBtn.dataset.code = fireKE.code;
+                fireBtn.dataset.key     = fireKE.key;
+                fireBtn.dataset.code    = fireKE.code;
+                fireBtn.dataset.keycode = fireKE.keyCode;
                 document.getElementById('vk-f-ico').textContent = '🔥';
                 document.getElementById('vk-f-lbl').textContent = km.F === ' ' ? 'SPC' : km.F.toUpperCase();
                 fireBtn.classList.remove('vk-disabled');
             } else {
                 delete fireBtn.dataset.key;
                 delete fireBtn.dataset.code;
+                delete fireBtn.dataset.keycode;
                 document.getElementById('vk-f-ico').textContent = '🔥';
                 document.getElementById('vk-f-lbl').textContent = '';
                 fireBtn.classList.add('vk-disabled');
@@ -359,35 +364,36 @@
         // Apply default keymap on load
         applyKeymap(KEYMAPS[DEFAULT_ROM]);
 
-        // Dispatch keyboard events to document so JSSpeccy picks them up
-        function vkDown(key, code) {
-            document.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true }));
+        // JSSpeccy listens on its root element and uses e.keyCode — must dispatch there
+        const emuEl = document.getElementById('jsspeccy');
+        function vkDown(key, code, keyCode) {
+            emuEl.dispatchEvent(new KeyboardEvent('keydown', { key, code, keyCode, bubbles: true }));
         }
-        function vkUp(key, code) {
-            document.dispatchEvent(new KeyboardEvent('keyup',   { key, code, bubbles: true }));
+        function vkUp(key, code, keyCode) {
+            emuEl.dispatchEvent(new KeyboardEvent('keyup',   { key, code, keyCode, bubbles: true }));
         }
 
         // Attach touch handlers to every .vk button (gamepad + number row)
         document.querySelectorAll('#vkb .vk, #vkb-nums .vk').forEach((btn) => {
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                const { key, code } = btn.dataset;
+                const { key, code, keycode } = btn.dataset;
                 if (!key) return;
                 btn.classList.add('pressed');
-                vkDown(key, code);
+                vkDown(key, code, +keycode);
             }, { passive: false });
 
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                const { key, code } = btn.dataset;
+                const { key, code, keycode } = btn.dataset;
                 btn.classList.remove('pressed');
-                if (key) vkUp(key, code);
+                if (key) vkUp(key, code, +keycode);
             }, { passive: false });
 
             btn.addEventListener('touchcancel', () => {
-                const { key, code } = btn.dataset;
+                const { key, code, keycode } = btn.dataset;
                 btn.classList.remove('pressed');
-                if (key) vkUp(key, code);
+                if (key) vkUp(key, code, +keycode);
             });
         });
     </script>
