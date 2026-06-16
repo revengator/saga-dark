@@ -209,7 +209,6 @@
         <button class="vk" data-key="2" data-code="Digit2" data-keycode="50"><span>2</span></button>
         <button class="vk" data-key="3" data-code="Digit3" data-keycode="51"><span>3</span></button>
         <button class="vk" data-key="4" data-code="Digit4" data-keycode="52"><span>4</span></button>
-        <button class="vk" data-key="5" data-code="Digit5" data-keycode="53"><span>5</span></button>
     </div>
 
     <!-- ENTER: its own full-width row (JS shows on touch) -->
@@ -294,6 +293,20 @@
             'o-film':           { L:null, R:null, U:null, D:null, F:' ' },
         };
         const DEFAULT_ROM = 'platformer';
+
+        // ── Capture JSSpeccy's Web Worker ─────────────────────────────────────
+        // We wrap window.Worker *before* initialising JSSpeccy so we can grab a
+        // handle to its emulation worker and post Spectrum keyboard-matrix
+        // messages straight to it. This is the reliable path for the on-screen
+        // gamepad; synthetic KeyboardEvents are only a fallback.
+        let specWorker = null;
+        const NativeWorker = window.Worker;
+        window.Worker = function (url, opts) {
+            const w = new NativeWorker(url, opts);
+            try { if (String(url).indexOf('jsspeccy-worker') !== -1) specWorker = w; } catch (_) {}
+            return w;
+        };
+        window.Worker.prototype = NativeWorker.prototype;
 
         // ── Emulator init ─────────────────────────────────────────────────────
         const emu = JSSpeccy(document.getElementById('jsspeccy'), {
@@ -386,41 +399,58 @@
         // identifies keys via e.keyCode. But keyCode passed through the
         // KeyboardEvent constructor is ignored by browsers (stays 0), so we
         // force it with defineProperty.
+        // ZX Spectrum keyboard matrix: data-key value → { row, mask }.
+        // Only the keys the gamepad can produce are listed (no shifts needed).
+        const MATRIX = {
+            '0': { row: 4, mask: 1 },  '1': { row: 3, mask: 1 },
+            '2': { row: 3, mask: 2 },  '3': { row: 3, mask: 4 },
+            '4': { row: 3, mask: 8 },  '5': { row: 3, mask: 16 },
+            'q': { row: 2, mask: 1 },  'a': { row: 1, mask: 1 },
+            'o': { row: 5, mask: 2 },  'p': { row: 5, mask: 1 },
+            'm': { row: 7, mask: 4 },  'r': { row: 2, mask: 8 },
+            'y': { row: 5, mask: 16 }, 'i': { row: 5, mask: 4 },
+            ' ': { row: 7, mask: 1 },  'Enter': { row: 6, mask: 1 },
+        };
+
+        // Fallback: synthetic KeyboardEvent (keyCode forced — browsers ignore
+        // the constructor value). Used only if the worker handle is missing.
         function makeKeyEvent(type, key, code, keyCode) {
-            const e = new KeyboardEvent(type, { key, code, bubbles: true, cancelable: true });
-            Object.defineProperty(e, 'keyCode', { get: () => keyCode });
-            Object.defineProperty(e, 'which',   { get: () => keyCode });
+            const e = new KeyboardEvent(type, { key, code, keyCode, which: keyCode, bubbles: true, cancelable: true });
+            try { Object.defineProperty(e, 'keyCode', { get: () => keyCode }); } catch (_) {}
+            try { Object.defineProperty(e, 'which',   { get: () => keyCode }); } catch (_) {}
             return e;
         }
-        function vkDown(key, code, keyCode) {
-            document.dispatchEvent(makeKeyEvent('keydown', key, code, keyCode));
-        }
-        function vkUp(key, code, keyCode) {
-            document.dispatchEvent(makeKeyEvent('keyup', key, code, keyCode));
+
+        // Primary path: post the matrix message straight to the emulation worker.
+        function emuKey(down, key, code, keyCode) {
+            const m = MATRIX[key];
+            if (specWorker && m) {
+                specWorker.postMessage({ message: down ? 'keyDown' : 'keyUp', row: m.row, mask: m.mask });
+                return;
+            }
+            document.dispatchEvent(makeKeyEvent(down ? 'keydown' : 'keyup', key, code, keyCode));
         }
 
-        // Attach touch handlers to every .vk button (gamepad + number row)
+        // Pointer events cover touch, pen and mouse — more reliable than touch* alone.
         document.querySelectorAll('#vkb .vk, #vkb-nums .vk, #vkb-enter .vk').forEach((btn) => {
-            btn.addEventListener('touchstart', (e) => {
+            const press = (e) => {
                 e.preventDefault();
                 const { key, code, keycode } = btn.dataset;
                 if (!key) return;
                 btn.classList.add('pressed');
-                vkDown(key, code, +keycode);
-            }, { passive: false });
-
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
+                emuKey(true, key, code, +keycode);
+            };
+            const release = (e) => {
+                if (e) e.preventDefault();
                 const { key, code, keycode } = btn.dataset;
+                if (!btn.classList.contains('pressed')) return;
                 btn.classList.remove('pressed');
-                if (key) vkUp(key, code, +keycode);
-            }, { passive: false });
-
-            btn.addEventListener('touchcancel', () => {
-                const { key, code, keycode } = btn.dataset;
-                btn.classList.remove('pressed');
-                if (key) vkUp(key, code, +keycode);
-            });
+                if (key) emuKey(false, key, code, +keycode);
+            };
+            btn.addEventListener('pointerdown', press);
+            btn.addEventListener('pointerup', release);
+            btn.addEventListener('pointercancel', release);
+            btn.addEventListener('pointerleave', release);
         });
     </script>
 </body>
