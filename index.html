@@ -107,6 +107,19 @@
             height: 46px;
             font-size: 1rem;
         }
+        /* ENTER on its own row, full width */
+        .enterrow {
+            display: none;
+            justify-content: center;
+            max-width: 340px;
+            margin: .5rem auto 0;
+        }
+        .enterrow .vk {
+            width: 100%;
+            height: 44px;
+            font-size: .9rem;
+            letter-spacing: .15em;
+        }
 
         /* Individual key button */
         .vk {
@@ -197,7 +210,11 @@
         <button class="vk" data-key="3" data-code="Digit3" data-keycode="51"><span>3</span></button>
         <button class="vk" data-key="4" data-code="Digit4" data-keycode="52"><span>4</span></button>
         <button class="vk" data-key="5" data-code="Digit5" data-keycode="53"><span>5</span></button>
-        <button class="vk" data-key="Enter" data-code="Enter" data-keycode="13" style="min-width:62px;font-size:.7rem">ENTER</button>
+    </div>
+
+    <!-- ENTER: its own full-width row (JS shows on touch) -->
+    <div class="enterrow" id="vkb-enter">
+        <button class="vk" data-key="Enter" data-code="Enter" data-keycode="13">ENTER</button>
     </div>
 
     <!--
@@ -303,6 +320,7 @@
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         if (isTouch) {
             document.getElementById('vkb-nums').style.display = 'flex';
+            document.getElementById('vkb-enter').style.display = 'flex';
             document.getElementById('vkb').style.display = 'flex';
         }
 
@@ -364,17 +382,25 @@
         // Apply default keymap on load
         applyKeymap(KEYMAPS[DEFAULT_ROM]);
 
-        // JSSpeccy listens on its root element and uses e.keyCode — must dispatch there
-        const emuEl = document.getElementById('jsspeccy');
+        // JSSpeccy listens on `document` (its default keyboardEventRoot) and
+        // identifies keys via e.keyCode. But keyCode passed through the
+        // KeyboardEvent constructor is ignored by browsers (stays 0), so we
+        // force it with defineProperty.
+        function makeKeyEvent(type, key, code, keyCode) {
+            const e = new KeyboardEvent(type, { key, code, bubbles: true, cancelable: true });
+            Object.defineProperty(e, 'keyCode', { get: () => keyCode });
+            Object.defineProperty(e, 'which',   { get: () => keyCode });
+            return e;
+        }
         function vkDown(key, code, keyCode) {
-            emuEl.dispatchEvent(new KeyboardEvent('keydown', { key, code, keyCode, bubbles: true }));
+            document.dispatchEvent(makeKeyEvent('keydown', key, code, keyCode));
         }
         function vkUp(key, code, keyCode) {
-            emuEl.dispatchEvent(new KeyboardEvent('keyup',   { key, code, keyCode, bubbles: true }));
+            document.dispatchEvent(makeKeyEvent('keyup', key, code, keyCode));
         }
 
         // Attach touch handlers to every .vk button (gamepad + number row)
-        document.querySelectorAll('#vkb .vk, #vkb-nums .vk').forEach((btn) => {
+        document.querySelectorAll('#vkb .vk, #vkb-nums .vk, #vkb-enter .vk').forEach((btn) => {
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const { key, code, keycode } = btn.dataset;
