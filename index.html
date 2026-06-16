@@ -28,10 +28,23 @@
         .tagline { margin: 0; opacity: .85; font-size: .95rem; }
         .tagline a { color: var(--accent); }
         .selector {
+            max-width: 760px;
+            margin: 1.25rem auto;
+        }
+        .group {
+            margin: 0 0 1rem;
+        }
+        .group-title {
+            font-size: .8rem;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            opacity: .6;
+            margin: 0 0 .5rem;
+        }
+        .group-buttons {
             display: flex;
             justify-content: center;
-            gap: .75rem;
-            margin: 1.25rem 0;
+            gap: .6rem;
             flex-wrap: wrap;
         }
         .selector button {
@@ -75,8 +88,24 @@
     </header>
 
     <div class="selector">
-        <button id="btn-dragon" class="active">▶ Dragon Phase</button>
-        <button id="btn-film">▶ Saga Film (intro)</button>
+        <div class="group">
+            <p class="group-title">Remakes — ZX Spectrum +2 128K</p>
+            <div class="group-buttons">
+                <button data-rom="platformer" class="active">▶ Platformer (Dark 1 + 2)</button>
+                <button data-rom="platformer-cheat">▶ Platformer · inmortal</button>
+                <button data-rom="dragon">▶ Dragon Phase</button>
+                <button data-rom="film">▶ Saga Film (intro)</button>
+            </div>
+        </div>
+        <div class="group">
+            <p class="group-title">Originals — ZX Spectrum 48K (1989-1990)</p>
+            <div class="group-buttons">
+                <button data-rom="o-dark1">▶ Dark 1 (Phase 1)</button>
+                <button data-rom="o-dark2">▶ Dark 2 (Phase 2)</button>
+                <button data-rom="o-dark3">▶ Dark 3 (Dragon)</button>
+                <button data-rom="o-film">▶ Film (intro)</button>
+            </div>
+        </div>
     </div>
 
     <div id="jsspeccy"></div>
@@ -90,29 +119,38 @@
     </footer>
 
     <script>
+        // Remakes are +2 128K snapshots; originals are 48K snapshots/.z80.
+        // JSSpeccy reads the machine model from each snapshot and switches the
+        // emulated hardware on load, so 48K and 128K entries can share one menu.
         const ROMS = {
-            dragon: 'remakes/128k-plus2-dragon/build/saga-dragon-128k.sna',
-            film:   'remakes/128k-plus2-film/build/saga-film-128k.sna',
+            'platformer':       'remakes/128k-plus2-platformer/build/saga-platformer-128k.sna',
+            'platformer-cheat': 'remakes/128k-plus2-platformer/build/saga-platformer-128k-cheat.sna',
+            'dragon':           'remakes/128k-plus2-dragon/build/saga-dragon-128k.sna',
+            'film':             'remakes/128k-plus2-film/build/saga-film-128k.sna',
+            'o-dark1':          'original-48k/snapshots/dark1/dark1.sna',
+            'o-dark2':          'original-48k/snapshots/dark2/dark2.sna',
+            'o-dark3':          'original-48k/snapshots/dark3/dark3.sna',
+            'o-film':           'original-48k/snapshots/film/film.z80',
         };
+        const DEFAULT_ROM = 'platformer';
 
         const emu = JSSpeccy(document.getElementById('jsspeccy'), {
             zoom: 2,
             machine: 128,
             sandbox: true,
-            openUrl: ROMS.dragon,
+            openUrl: ROMS[DEFAULT_ROM],
         });
 
-        const btnDragon = document.getElementById('btn-dragon');
-        const btnFilm = document.getElementById('btn-film');
+        const buttons = Array.from(document.querySelectorAll('.selector button[data-rom]'));
 
         function load(which) {
-            emu.openUrl(ROMS[which]);
-            btnDragon.classList.toggle('active', which === 'dragon');
-            btnFilm.classList.toggle('active', which === 'film');
+            const url = ROMS[which];
+            if (!url) return;
+            emu.openUrl(url);
+            buttons.forEach((b) => b.classList.toggle('active', b.dataset.rom === which));
         }
 
-        btnDragon.addEventListener('click', () => load('dragon'));
-        btnFilm.addEventListener('click', () => load('film'));
+        buttons.forEach((b) => b.addEventListener('click', () => load(b.dataset.rom)));
     </script>
 </body>
 </html>

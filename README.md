@@ -98,9 +98,14 @@ original-48k/src/film/build.sh                 # film.bin + film.tap
 
 To launch the `.sna`/`.tap` in an emulator, see [docs/emulator.md](docs/emulator.md).
 
-## Play locally
+## Play in the browser
 
-The repo ships an `index.html` at its root that embeds [JSSpeccy 3.2](https://github.com/gasman/jsspeccy3) (GPL v3, bundled in `docs/jsspeccy/`) and lets you switch between the Dragon and the Film with a button. The repo is private, so we don't publish it via GitHub Pages — instead, run it from a local HTTP server in this checkout:
+The repo ships an `index.html` at its root that embeds [JSSpeccy 3.2](https://github.com/gasman/jsspeccy3) (GPL v3, bundled in `docs/jsspeccy/`) and offers a menu of every committed snapshot — JSSpeccy reads each snapshot's machine model and switches the emulated hardware on load, so 48K originals and +2 128K remakes share one menu:
+
+- **Remakes (+2 128K):** Platformer (Dark 1 + 2, normal **and** infinite-energy cheat), Dragon Phase, Saga Film intro.
+- **Originals (48K, 1989-1990):** Dark 1, Dark 2, Dark 3 (Dragon), Film intro.
+
+When [GitHub Pages](https://pages.github.com/) is enabled for the repo, this page is served directly. To run it from a local checkout instead:
 
 ```bash
 tools/play.sh                 # default port 8000, opens browser automatically
