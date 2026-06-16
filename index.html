@@ -93,12 +93,14 @@
             justify-content: center;
         }
 
-        /* Number row 0-5 below the main pad */
+        /* Number row 0-5 — own row above the gamepad (JS shows on touch) */
         .numrow {
-            display: flex;
+            display: none;
             justify-content: center;
-            gap: 3px;
-            margin-top: .75rem;
+            flex-wrap: wrap;
+            gap: 4px;
+            max-width: 340px;
+            margin: 1rem auto 0;
         }
         .numrow .vk {
             width: 46px;
@@ -187,6 +189,16 @@
 
     <div id="jsspeccy"></div>
 
+    <!-- Number row: own row on top, always visible on touch devices -->
+    <div class="numrow" id="vkb-nums">
+        <button class="vk" data-key="0" data-code="Digit0"><span>0</span></button>
+        <button class="vk" data-key="1" data-code="Digit1"><span>1</span></button>
+        <button class="vk" data-key="2" data-code="Digit2"><span>2</span></button>
+        <button class="vk" data-key="3" data-code="Digit3"><span>3</span></button>
+        <button class="vk" data-key="4" data-code="Digit4"><span>4</span></button>
+        <button class="vk" data-key="5" data-code="Digit5"><span>5</span></button>
+    </div>
+
     <!--
       Virtual gamepad — only shown on touch devices (JS sets display:flex).
 
@@ -223,15 +235,6 @@
             <button class="vk fire" id="vk-f" style="width:119px;height:119px;font-size:2rem">
                 <span id="vk-f-ico">🔥</span><span class="vk-label" id="vk-f-lbl"></span>
             </button>
-        </div>
-        <!-- Number row: always visible, for in-game menus -->
-        <div class="numrow" id="vkb-nums">
-            <button class="vk" data-key="0" data-code="Digit0"><span>0</span></button>
-            <button class="vk" data-key="1" data-code="Digit1"><span>1</span></button>
-            <button class="vk" data-key="2" data-code="Digit2"><span>2</span></button>
-            <button class="vk" data-key="3" data-code="Digit3"><span>3</span></button>
-            <button class="vk" data-key="4" data-code="Digit4"><span>4</span></button>
-            <button class="vk" data-key="5" data-code="Digit5"><span>5</span></button>
         </div>
     </div>
 
@@ -297,7 +300,10 @@
 
         // ── Virtual gamepad ───────────────────────────────────────────────────
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        if (isTouch) document.getElementById('vkb').style.display = 'flex';
+        if (isTouch) {
+            document.getElementById('vkb-nums').style.display = 'flex';
+            document.getElementById('vkb').style.display = 'flex';
+        }
 
         // Map a single letter to { key, code } for KeyboardEvent
         function letterToKE(l) {
@@ -360,8 +366,8 @@
             document.dispatchEvent(new KeyboardEvent('keyup',   { key, code, bubbles: true }));
         }
 
-        // Attach touch handlers to every .vk button
-        document.querySelectorAll('#vkb .vk').forEach((btn) => {
+        // Attach touch handlers to every .vk button (gamepad + number row)
+        document.querySelectorAll('#vkb .vk, #vkb-nums .vk').forEach((btn) => {
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const { key, code } = btn.dataset;
