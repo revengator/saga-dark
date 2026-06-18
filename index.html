@@ -268,7 +268,7 @@
             <div class="phases">
                 <div class="phase">
                     <div class="phase-name">Film</div>
-                    <button class="btn" data-rom="o-film">Film (intro)</button>
+                    <button class="btn active" data-rom="o-film">Film (intro)</button>
                 </div>
                 <div class="phase">
                     <div class="phase-name">Dark 1 + 2</div>
@@ -297,7 +297,7 @@
                 </div>
                 <div class="phase">
                     <div class="phase-name">Platformer · Dark 1 + 2</div>
-                    <button class="btn active" data-rom="platformer">Platformer</button>
+                    <button class="btn" data-rom="platformer">Platformer</button>
                     <button class="btn cheat" data-rom="platformer-cheat">Immortal</button>
                 </div>
                 <div class="phase">
@@ -406,7 +406,7 @@
             'o-dark3':          { L:'r', R:'t', U:'y', D:null, F:null },
             'o-film':           { L:null, R:null, U:null, D:null, F:' ' },
         };
-        const DEFAULT_ROM = 'platformer';
+        const DEFAULT_ROM = 'o-film';
 
         // ── Capture JSSpeccy's Web Worker ─────────────────────────────────────
         // We wrap window.Worker *before* initialising JSSpeccy so we can grab a
