@@ -453,7 +453,7 @@
         }
 
         selectorBtns.forEach((b) => b.addEventListener('click', () => load(b.dataset.rom)));
-        load(DEFAULT_ROM);
+        emu.onReady(() => load(DEFAULT_ROM));
 
         // ── Virtual gamepad ───────────────────────────────────────────────────
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
