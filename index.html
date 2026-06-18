@@ -426,34 +426,26 @@
         // fetch the latest .sna after a rebuild instead of serving a stale
         // copy. Within a session the same token is reused, so switching ROMs
         // still hits the browser cache.
-        const CACHE_BUST = Date.now();
-
         // ── Emulator init ─────────────────────────────────────────────────────
         const emu = JSSpeccy(document.getElementById('jsspeccy'), {
             zoom: 1,
             machine: 128,
             sandbox: true,
+            openUrl: ROMS[DEFAULT_ROM],
         });
 
         // ── ROM selector ──────────────────────────────────────────────────────
         const selectorBtns = Array.from(document.querySelectorAll('.selector button[data-rom]'));
 
-        // JSSpeccy detects format via URL.endsWith('.sna') — a ?v= query string
-        // breaks that check. We fetch with cache-busting ourselves and hand JSSpeccy
-        // a File object whose .name has the clean extension.
-        async function load(which) {
+        function load(which) {
             if (!ROMS[which]) return;
+            emu.openUrl(ROMS[which]);
             selectorBtns.forEach((b) => b.classList.toggle('active', b.dataset.rom === which));
             applyKeymap(KEYMAPS[which] || KEYMAPS['platformer']);
-            const url = ROMS[which] + '?v=' + CACHE_BUST;
-            const resp = await fetch(url, { cache: 'no-cache' });
-            const buf  = await resp.arrayBuffer();
-            const filename = ROMS[which].split('/').pop();
-            await emu.openFile(new File([buf], filename));
         }
 
+        emu.onReady(() => selectorBtns.forEach((b) => b.classList.toggle('active', b.dataset.rom === DEFAULT_ROM)));
         selectorBtns.forEach((b) => b.addEventListener('click', () => load(b.dataset.rom)));
-        emu.onReady(() => load(DEFAULT_ROM));
 
         // ── Virtual gamepad ───────────────────────────────────────────────────
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
